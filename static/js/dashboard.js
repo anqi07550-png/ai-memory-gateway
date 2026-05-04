@@ -102,12 +102,13 @@ async function loadMemories() {
     }
 }
 
-function renderTable(mems) {
+function renderTable(mems, startIndex) {
+    startIndex = startIndex || 0;
     const tbody = document.getElementById('tbody');
-    tbody.innerHTML = mems.map(m => 
+    tbody.innerHTML = mems.map((m, i) => 
         '<tr data-id="' + m.id + '">' +
         '<td class="col-check"><input type="checkbox" class="mem-check" value="' + m.id + '"></td>' +
-        '<td class="col-id">' + m.id + '</td>' +
+        '<td class="col-id">' + (startIndex + i + 1) + '</td>' +
         '<td class="col-content"><textarea class="content-textarea" id="c_' + m.id + '">' + escHtml(m.content) + '</textarea></td>' +
         '<td class="col-importance"><input type="number" class="importance-input" id="i_' + m.id + '" value="' + m.importance + '" min="1" max="10"></td>' +
         '<td class="col-source">' + (m.source_session || '-') + '</td>' +
@@ -166,7 +167,7 @@ function filterAndSort() {
     const start = (memCurrentPage - 1) * MEM_PER_PAGE;
     const pageMems = mems.slice(start, start + MEM_PER_PAGE);
     
-    renderTable(pageMems);
+    renderTable(pageMems, start);
     renderMemPagination(totalItems, totalPages);
     
     // 更新统计
@@ -744,8 +745,8 @@ function renderConvList(conversations, isSearch = false) {
     
     for (const conv of conversations) {
         const sid = conv.session_id || conv.id;
-        const title = escapeHtml(conv.title || sid);
-        const preview = escapeHtml(conv.preview || '');
+        const title = escapeHtml(sid);
+        const preview = escapeHtml(conv.title || conv.preview || '');
         const msgCount = conv.message_count || '';
         const totalTokens = conv.total_tokens || 0;
         const tokenStr = totalTokens > 0 ? (totalTokens >= 1000000 ? (totalTokens / 1000000).toFixed(1) + 'M' : totalTokens >= 1000 ? (totalTokens / 1000).toFixed(1) + 'K' : totalTokens) : '';
@@ -1153,6 +1154,7 @@ function renderThreadList(threads) {
                     ${isActive ? '<span style="background: var(--primary); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px;">活跃</span>' : ''}
                 </div>
                 <div style="display: flex; gap: 6px;">
+                    <button class="btn btn-sm" onclick="renameThread('${t.session_id}')">✏️ 改名</button>
                     <button class="btn btn-sm" onclick="openSummaryModal('${t.session_id}')">📝 摘要</button>
                     ${!isActive ? `<button class="btn btn-sm btn-primary" onclick="switchThread('${t.session_id}')">切换到此</button>` : ''}
                 </div>
@@ -1210,6 +1212,26 @@ async function createThread() {
         loadThreads();
     } catch(e) {
         msgEl.innerHTML = `<div style="color: var(--danger);">请求失败: ${e.message}</div>`;
+    }
+}
+
+async function renameThread(oldId) {
+    const newId = prompt(`请输入新的对话线ID（当前: ${oldId}）:`, oldId);
+    if (!newId || newId.trim() === '' || newId.trim() === oldId) return;
+    try {
+        const resp = await fetch('/api/partition/thread/rename', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ old_id: oldId, new_id: newId.trim() })
+        });
+        const data = await resp.json();
+        if (data.error) {
+            alert('改名失败: ' + data.error);
+            return;
+        }
+        loadThreads();
+    } catch(e) {
+        alert('请求失败: ' + e.message);
     }
 }
 

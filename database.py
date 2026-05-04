@@ -1168,6 +1168,35 @@ async def delete_session_cache_state(session_id: str):
         await conn.execute("DELETE FROM session_cache_state WHERE session_id = $1", session_id)
 
 
+async def rename_session_id(old_id: str, new_id: str) -> bool:
+    """重命名对话线ID（事务内同时修改三个表）"""
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            # 检查新ID是否已存在
+            exists = await conn.fetchval(
+                "SELECT 1 FROM session_cache_state WHERE session_id = $1", new_id
+            )
+            if exists:
+                return False
+            # session_cache_state
+            await conn.execute(
+                "UPDATE session_cache_state SET session_id = $1 WHERE session_id = $2",
+                new_id, old_id
+            )
+            # conversations
+            await conn.execute(
+                "UPDATE conversations SET session_id = $1 WHERE session_id = $2",
+                new_id, old_id
+            )
+            # token_usage
+            await conn.execute(
+                "UPDATE token_usage SET session_id = $1 WHERE session_id = $2",
+                new_id, old_id
+            )
+            return True
+
+
 def db_row_to_message(row: dict) -> dict:
     """
     把DB记录还原成API消息格式。

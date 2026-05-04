@@ -24,7 +24,7 @@ from fastapi.responses import StreamingResponse, JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from database import init_tables, close_pool, save_message, search_memories, save_memory, get_all_memories_count, get_recent_memories, get_all_memories, get_pool, get_all_memories_detail, update_memory, delete_memory, delete_memories_batch, get_gateway_config, set_gateway_config, get_conversation_messages, get_session_cache_state, save_session_cache_state, delete_session_cache_state, save_token_usage, ensure_token_usage_table, ensure_conversation_titles_table, get_conversations_paginated, delete_conversation, batch_delete_conversations, merge_sessions_to_target, list_all_session_cache_states, export_all_conversations, import_conversations, get_last_user_content, update_last_assistant_message, db_row_to_message, backfill_memory_embeddings, get_pending_memory_embedding_count, search_conversations, update_message_content
+from database import init_tables, close_pool, save_message, search_memories, save_memory, get_all_memories_count, get_recent_memories, get_all_memories, get_pool, get_all_memories_detail, update_memory, delete_memory, delete_memories_batch, get_gateway_config, set_gateway_config, get_conversation_messages, get_session_cache_state, save_session_cache_state, delete_session_cache_state, save_token_usage, ensure_token_usage_table, ensure_conversation_titles_table, get_conversations_paginated, delete_conversation, batch_delete_conversations, merge_sessions_to_target, list_all_session_cache_states, export_all_conversations, import_conversations, get_last_user_content, update_last_assistant_message, db_row_to_message, backfill_memory_embeddings, get_pending_memory_embedding_count, search_conversations, update_message_content, rename_session_id
 from memory_extractor import extract_memories, score_memories
 
 # ============================================================
@@ -1537,6 +1537,29 @@ async def api_switch_thread(request: Request):
         PARTITION_SESSION_ID = new_id
         await set_gateway_config("partition_session_id", new_id)
         return {"status": "ok", "old_session_id": old_id, "new_session_id": new_id}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.put("/api/partition/thread/rename")
+async def api_rename_thread(request: Request):
+    global PARTITION_SESSION_ID
+    try:
+        body = await request.json()
+        old_id = body.get("old_id", "").strip()
+        new_id = body.get("new_id", "").strip()
+        if not old_id or not new_id:
+            return {"error": "old_id 和 new_id 不能为空"}
+        if old_id == new_id:
+            return {"error": "新旧ID相同"}
+        success = await rename_session_id(old_id, new_id)
+        if not success:
+            return {"error": f"对话线 '{new_id}' 已存在"}
+        # 如果重命名的是活跃线，同步更新
+        if PARTITION_SESSION_ID == old_id:
+            PARTITION_SESSION_ID = new_id
+            await set_gateway_config("partition_session_id", new_id)
+        return {"status": "ok", "old_id": old_id, "new_id": new_id}
     except Exception as e:
         return {"error": str(e)}
 
