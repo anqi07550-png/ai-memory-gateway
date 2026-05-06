@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Memory Gateway</title>
-    <link rel="stylesheet" href="/static/css/dashboard.css?v=3.4">
+    <link rel="stylesheet" href="/static/css/dashboard.css?v=3.5">
 </head>
 <body>
     <div class="dashboard">
@@ -34,6 +34,10 @@
                 <a href="#" class="nav-item" data-section="threads">
                     <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
                     <span class="nav-label">对话线</span>
+                </a>
+                <a href="#" class="nav-item" data-section="settings">
+                    <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/></svg></span>
+                    <span class="nav-label">设置</span>
                 </a>
             </nav>
             <div class="sidebar-footer">
@@ -422,9 +426,171 @@
                     </div>
                 </div>
             </section>
+
+            <!-- 设置 Section -->
+            <section id="section-settings" class="section">
+                <div class="section-header">
+                    <h2>设置</h2>
+                    <div id="settings-msg" class="msg-box" style="display:none;"></div>
+                </div>
+
+                <!-- 基础连接 -->
+                <div class="card settings-card">
+                    <h3 class="settings-group-title">基础连接</h3>
+                    <div class="settings-field">
+                        <label>API Base URL</label>
+                        <input type="text" id="set-API_BASE_URL" class="input" placeholder="https://openrouter.ai/api/v1/chat/completions">
+                    </div>
+                    <div class="settings-field">
+                        <label>API Key</label>
+                        <input type="text" id="set-API_KEY" class="input" placeholder="sk-or-...">
+                        <small class="form-hint" id="set-API_KEY-hint">打码显示，留空不改</small>
+                    </div>
+                    <div class="settings-field">
+                        <label>默认模型</label>
+                        <div class="combo-box" id="combo-DEFAULT_MODEL">
+                            <input type="text" id="set-DEFAULT_MODEL" class="combo-input" placeholder="搜索或输入模型名..." autocomplete="off">
+                            <div class="combo-dropdown" id="dropdown-DEFAULT_MODEL"></div>
+                        </div>
+                        <small class="form-hint"><span id="model-count-hint"></span> <a href="#" onclick="loadModelList();return false;" style="color:var(--primary);">刷新列表</a></small>
+                    </div>
+                </div>
+
+                <!-- 记忆系统 -->
+                <div class="card settings-card">
+                    <h3 class="settings-group-title">记忆系统</h3>
+                    <div class="settings-field settings-toggle-row">
+                        <label>启用记忆</label>
+                        <label class="toggle"><input type="checkbox" id="set-MEMORY_ENABLED"><span class="toggle-slider"></span></label>
+                    </div>
+                    <div class="settings-field">
+                        <label>记忆提取 / 整理模型</label>
+                        <div class="combo-box" id="combo-MEMORY_MODEL">
+                            <input type="text" id="set-MEMORY_MODEL" class="combo-input" placeholder="搜索或输入模型名（留空用默认）" autocomplete="off">
+                            <div class="combo-dropdown" id="dropdown-MEMORY_MODEL"></div>
+                        </div>
+                    </div>
+                    <div class="settings-field">
+                        <label>最大注入记忆数 (MAX_MEMORIES_INJECT)</label>
+                        <input type="number" id="set-MAX_MEMORIES_INJECT" class="input" min="1" max="50">
+                    </div>
+                    <div class="settings-field">
+                        <label>最低分数阈值 (MIN_SCORE_THRESHOLD)</label>
+                        <input type="number" id="set-MIN_SCORE_THRESHOLD" class="input" min="0" max="1" step="0.01">
+                    </div>
+                    <div class="settings-field">
+                        <label>提取间隔轮数 (MEMORY_EXTRACT_INTERVAL)</label>
+                        <input type="number" id="set-MEMORY_EXTRACT_INTERVAL" class="input" min="0" max="20">
+                        <small class="form-hint">0=关闭提取，1=每轮，N=每N轮</small>
+                    </div>
+                </div>
+
+                <!-- 缓存分区 -->
+                <div class="card settings-card">
+                    <h3 class="settings-group-title">缓存分区</h3>
+                    <div class="settings-field settings-toggle-row">
+                        <label>启用缓存分区</label>
+                        <label class="toggle"><input type="checkbox" id="set-CACHE_PARTITION_ENABLED"><span class="toggle-slider"></span></label>
+                    </div>
+                    <div class="settings-field">
+                        <label>轮转周期 (CACHE_PARTITION_X)</label>
+                        <input type="number" id="set-CACHE_PARTITION_X" class="input" min="5" max="100">
+                    </div>
+                    <div class="settings-field">
+                        <label>摘要模型</label>
+                        <div class="combo-box" id="combo-CACHE_SUMMARY_MODEL">
+                            <input type="text" id="set-CACHE_SUMMARY_MODEL" class="combo-input" placeholder="搜索或输入模型名..." autocomplete="off">
+                            <div class="combo-dropdown" id="dropdown-CACHE_SUMMARY_MODEL"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 向量搜索 -->
+                <div class="card settings-card">
+                    <h3 class="settings-group-title">向量搜索</h3>
+                    <div class="settings-field settings-toggle-row">
+                        <label>启用向量搜索</label>
+                        <label class="toggle"><input type="checkbox" id="set-MEMORY_VECTOR_ENABLED"><span class="toggle-slider"></span></label>
+                    </div>
+                    <div class="settings-field">
+                        <label>Embedding API Key</label>
+                        <input type="text" id="set-EMBEDDING_API_KEY" class="input" placeholder="sk-...">
+                        <small class="form-hint" id="set-EMBEDDING_API_KEY-hint">打码显示，留空不改</small>
+                    </div>
+                    <div class="settings-field">
+                        <label>Embedding Base URL</label>
+                        <input type="text" id="set-EMBEDDING_BASE_URL" class="input" placeholder="https://api.openai.com/v1">
+                    </div>
+                    <div class="settings-field">
+                        <label>Embedding 模型</label>
+                        <input type="text" id="set-EMBEDDING_MODEL" class="input" placeholder="text-embedding-3-small">
+                    </div>
+                    <div class="settings-field">
+                        <label>Embedding 维度</label>
+                        <input type="number" id="set-EMBEDDING_DIM" class="input" min="64" max="4096">
+                    </div>
+                </div>
+
+                <!-- 搜索权重 -->
+                <div class="card settings-card">
+                    <h3 class="settings-group-title">搜索权重</h3>
+                    <small class="form-hint" style="display:block;margin-bottom:12px;">四项权重之和建议为 1.0</small>
+                    <div class="settings-field">
+                        <label>关键词权重 <span class="slider-val" id="val-MEMORY_HW_KEYWORD"></span></label>
+                        <input type="range" id="set-MEMORY_HW_KEYWORD" min="0" max="1" step="0.05" oninput="updateSliderVal('MEMORY_HW_KEYWORD')">
+                    </div>
+                    <div class="settings-field">
+                        <label>语义权重 <span class="slider-val" id="val-MEMORY_HW_SEMANTIC"></span></label>
+                        <input type="range" id="set-MEMORY_HW_SEMANTIC" min="0" max="1" step="0.05" oninput="updateSliderVal('MEMORY_HW_SEMANTIC')">
+                    </div>
+                    <div class="settings-field">
+                        <label>重要度权重 <span class="slider-val" id="val-MEMORY_HW_IMPORTANCE"></span></label>
+                        <input type="range" id="set-MEMORY_HW_IMPORTANCE" min="0" max="1" step="0.05" oninput="updateSliderVal('MEMORY_HW_IMPORTANCE')">
+                    </div>
+                    <div class="settings-field">
+                        <label>时效性权重 <span class="slider-val" id="val-MEMORY_HW_RECENCY"></span></label>
+                        <input type="range" id="set-MEMORY_HW_RECENCY" min="0" max="1" step="0.05" oninput="updateSliderVal('MEMORY_HW_RECENCY')">
+                    </div>
+                    <div class="settings-field">
+                        <label>语义阈值 <span class="slider-val" id="val-MEMORY_SEMANTIC_THRESHOLD"></span></label>
+                        <input type="range" id="set-MEMORY_SEMANTIC_THRESHOLD" min="0" max="1" step="0.05" oninput="updateSliderVal('MEMORY_SEMANTIC_THRESHOLD')">
+                    </div>
+                </div>
+
+                <!-- 其他 -->
+                <div class="card settings-card">
+                    <h3 class="settings-group-title">其他</h3>
+                    <div class="settings-field settings-toggle-row">
+                        <label>强制流式传输 (FORCE_STREAM)</label>
+                        <label class="toggle"><input type="checkbox" id="set-FORCE_STREAM"><span class="toggle-slider"></span></label>
+                    </div>
+                    <div class="settings-field">
+                        <label>推理强度 (REASONING_EFFORT)</label>
+                        <select id="set-REASONING_EFFORT" class="input">
+                            <option value="">不设置</option>
+                            <option value="low">low</option>
+                            <option value="high">high</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- System Prompt -->
+                <div class="card settings-card">
+                    <h3 class="settings-group-title">System Prompt</h3>
+                    <div class="settings-field">
+                        <textarea id="set-systemPrompt" class="textarea" rows="12" placeholder="留空则使用 system_prompt.txt 的默认内容"></textarea>
+                        <small class="form-hint" id="prompt-char-count"></small>
+                    </div>
+                </div>
+
+                <!-- 保存按钮 -->
+                <div style="text-align:center; padding:24px 0 40px;">
+                    <button class="btn btn-primary btn-lg" onclick="saveSettings()" id="save-settings-btn" style="min-width:200px;">保存设置</button>
+                </div>
+            </section>
         </main>
     </div>
 
-    <script src="/static/js/dashboard.js?v=3.4"></script>
+    <script src="/static/js/dashboard.js?v=3.5"></script>
 </body>
 </html>
